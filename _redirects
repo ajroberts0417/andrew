@@ -1,2 +1,3 @@
-/substack https://andrewjrose.substack.com
+/s/* https://andrewjrose.substack.com/:splat
 /priya https://prigoose.substack.com/
+/substack https://andrewjrose.substack.com
