@@ -35,14 +35,6 @@
 <body>
   <div id="controls">
     <div class="slider-container">
-      <label for="verticesSlider">Vertices: <span id="verticesValue">4</span></label>
-      <input type="range" id="verticesSlider" min="4" max="20" value="4">
-    </div>
-    <div class="slider-container">
-      <label for="edgesSlider">Edges: <span id="edgesValue">4</span></label>
-      <input type="range" id="edgesSlider" min="4" max="20" value="4">
-    </div>
-    <div class="slider-container">
       <label for="speedSlider">Speed: <span id="speedValue">1</span></label>
       <input type="range" id="speedSlider" min="0" max="2" step="0.1" value="1">
     </div>
@@ -65,8 +57,6 @@
   </div>
   <script>
     let scene, camera, renderer, shape, backgroundScene, backgroundCamera, backgroundMesh;
-    const verticesSlider = document.getElementById('verticesSlider');
-    const edgesSlider = document.getElementById('edgesSlider');
     const speedSlider = document.getElementById('speedSlider');
     const grainSlider = document.getElementById('grainSlider');
     const color1Slider = document.getElementById('color1Slider');
@@ -87,11 +77,8 @@
       backgroundCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
       createBackgroundShader();
-      createShape();
       animate();
 
-      verticesSlider.addEventListener('input', updateShape);
-      edgesSlider.addEventListener('input', updateShape);
       speedSlider.addEventListener('input', updateShaderUniforms);
       grainSlider.addEventListener('input', updateShaderUniforms);
       color1Slider.addEventListener('input', updateShaderUniforms);
@@ -180,33 +167,6 @@
       backgroundScene.add(backgroundMesh);
     }
 
-    function createShape() {
-      const vertices = parseInt(verticesSlider.value);
-      const edges = parseInt(edgesSlider.value);
-
-      const geometry = new THREE.ParametricBufferGeometry((u, v, dest) => {
-        const theta = u * Math.PI * 2;
-        const phi = v * Math.PI;
-        const r = 1 + 0.5 * Math.sin(edges * theta) * Math.sin(vertices * phi);
-        dest.set(
-          r * Math.sin(phi) * Math.cos(theta),
-          r * Math.cos(phi),
-          r * Math.sin(phi) * Math.sin(theta)
-        );
-      }, 50, 50);
-
-      const material = new THREE.MeshNormalMaterial();
-      shape = new THREE.Mesh(geometry, material);
-      scene.add(shape);
-    }
-
-    function updateShape() {
-      document.getElementById('verticesValue').textContent = verticesSlider.value;
-      document.getElementById('edgesValue').textContent = edgesSlider.value;
-      scene.remove(shape);
-      createShape();
-    }
-
     function updateShaderUniforms() {
       const speed = parseFloat(speedSlider.value);
       document.getElementById('speedValue').textContent = speed.toFixed(1);
@@ -229,8 +189,6 @@
       renderer.clear();
       renderer.render(backgroundScene, backgroundCamera);
 
-      shape.rotation.x += 0.01;
-      shape.rotation.y += 0.01;
       renderer.render(scene, camera);
     }
 
