@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Generative Art Maker with Adjustable Shader Background and 3D Shape</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.7);
+      padding: 10px;
+      z-index: 100;
+    }
+
+    .slider-container {
+      margin-bottom: 10px;
+    }
+
+    .slider-container label {
+      display: inline-block;
+      width: 120px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="controls">
+    <div class="slider-container">
+      <label for="verticesSlider">Vertices: <span id="verticesValue">4</span></label>
+      <input type="range" id="verticesSlider" min="4" max="20" value="4">
+    </div>
+    <div class="slider-container">
+      <label for="edgesSlider">Edges: <span id="edgesValue">4</span></label>
+      <input type="range" id="edgesSlider" min="4" max="20" value="4">
+    </div>
+    <div class="slider-container">
+      <label for="speedSlider">Speed: <span id="speedValue">1</span></label>
+      <input type="range" id="speedSlider" min="0" max="2" step="0.1" value="1">
+    </div>
+    <div class="slider-container">
+      <label for="grainSlider">Graininess: <span id="grainValue">0.1</span></label>
+      <input type="range" id="grainSlider" min="0" max="0.5" step="0.01" value="0.1">
+    </div>
+    <div class="slider-container">
+      <label for="color1Slider">Color 1:</label>
+      <input type="color" id="color1Slider" value="#800080">
+    </div>
+    <div class="slider-container">
+      <label for="color2Slider">Color 2:</label>
+      <input type="color" id="color2Slider" value="#1a669f">
+    </div>
+    <div class="slider-container">
+      <label for="color3Slider">Color 3:</label>
+      <input type="color" id="color3Slider" value="#e6b800">
+    </div>
+  </div>
+  <script>
+    let scene, camera, renderer, shape, backgroundScene, backgroundCamera, backgroundMesh;
+    const verticesSlider = document.getElementById('verticesSlider');
+    const edgesSlider = document.getElementById('edgesSlider');
+    const speedSlider = document.getElementById('speedSlider');
+    const grainSlider = document.getElementById('grainSlider');
+    const color1Slider = document.getElementById('color1Slider');
+    const color2Slider = document.getElementById('color2Slider');
+    const color3Slider = document.getElementById('color3Slider');
+
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.autoClear = false;
+      document.body.appendChild(renderer.domElement);
+
+      camera.position.z = 5;
+
+      backgroundScene = new THREE.Scene();
+      backgroundCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      createBackgroundShader();
+      createShape();
+      animate();
+
+      verticesSlider.addEventListener('input', updateShape);
+      edgesSlider.addEventListener('input', updateShape);
+      speedSlider.addEventListener('input', updateShaderUniforms);
+      grainSlider.addEventListener('input', updateShaderUniforms);
+      color1Slider.addEventListener('input', updateShaderUniforms);
+      color2Slider.addEventListener('input', updateShaderUniforms);
+      color3Slider.addEventListener('input', updateShaderUniforms);
+    }
+
+    function createBackgroundShader() {
+      const vertexShader = `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position, 1.0);
+                }
+            `;
+
+      const fragmentShader = `
+                uniform float time;
+                uniform float graininess;
+                uniform vec3 color1;
+                uniform vec3 color2;
+                uniform vec3 color3;
+                varying vec2 vUv;
+
+                // Simplex 2D noise
+                vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+
+                float snoise(vec2 v) {
+                    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                            -0.577350269189626, 0.024390243902439);
+                    vec2 i  = floor(v + dot(v, C.yy) );
+                    vec2 x0 = v -   i + dot(i, C.xx);
+                    vec2 i1;
+                    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                    vec4 x12 = x0.xyxy + C.xxzz;
+                    x12.xy -= i1;
+                    i = mod(i, 289.0);
+                    vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+                    + i.x + vec3(0.0, i1.x, 1.0 ));
+                    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),
+                    dot(x12.zw,x12.zw)), 0.0);
+                    m = m*m ;
+                    m = m*m ;
+                    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                    vec3 h = abs(x) - 0.5;
+                    vec3 ox = floor(x + 0.5);
+                    vec3 a0 = x - ox;
+                    m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+                    vec3 g;
+                    g.x  = a0.x  * x0.x  + h.x  * x0.y;
+                    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                    return 130.0 * dot(m, g);
+                }
+
+                void main() {
+                    vec2 uv = vUv;
+                    
+                    float n = snoise(uv + time * 0.1) * 0.5 + 0.5;
+                    
+                    vec3 color = mix(color1, color2, n);
+                    color = mix(color, color3, snoise(uv * 2.0 - time * 0.05));
+                    
+                    float grain = snoise(uv * 1000.0) * graininess;
+                    color += grain;
+                    
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
+
+      const uniforms = {
+        time: { value: 0 },
+        graininess: { value: 0.1 },
+        color1: { value: new THREE.Color(0x800080) },
+        color2: { value: new THREE.Color(0x1a669f) },
+        color3: { value: new THREE.Color(0xe6b800) }
+      };
+
+      const backgroundMaterial = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader
+      });
+
+      const plane = new THREE.PlaneGeometry(2, 2);
+      backgroundMesh = new THREE.Mesh(plane, backgroundMaterial);
+      backgroundScene.add(backgroundMesh);
+    }
+
+    function createShape() {
+      const vertices = parseInt(verticesSlider.value);
+      const edges = parseInt(edgesSlider.value);
+
+      const geometry = new THREE.ParametricBufferGeometry((u, v, dest) => {
+        const theta = u * Math.PI * 2;
+        const phi = v * Math.PI;
+        const r = 1 + 0.5 * Math.sin(edges * theta) * Math.sin(vertices * phi);
+        dest.set(
+          r * Math.sin(phi) * Math.cos(theta),
+          r * Math.cos(phi),
+          r * Math.sin(phi) * Math.sin(theta)
+        );
+      }, 50, 50);
+
+      const material = new THREE.MeshNormalMaterial();
+      shape = new THREE.Mesh(geometry, material);
+      scene.add(shape);
+    }
+
+    function updateShape() {
+      document.getElementById('verticesValue').textContent = verticesSlider.value;
+      document.getElementById('edgesValue').textContent = edgesSlider.value;
+      scene.remove(shape);
+      createShape();
+    }
+
+    function updateShaderUniforms() {
+      const speed = parseFloat(speedSlider.value);
+      document.getElementById('speedValue').textContent = speed.toFixed(1);
+
+      const graininess = parseFloat(grainSlider.value);
+      document.getElementById('grainValue').textContent = graininess.toFixed(2);
+
+      backgroundMesh.material.uniforms.graininess.value = graininess;
+      backgroundMesh.material.uniforms.color1.value.setStyle(color1Slider.value);
+      backgroundMesh.material.uniforms.color2.value.setStyle(color2Slider.value);
+      backgroundMesh.material.uniforms.color3.value.setStyle(color3Slider.value);
+    }
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+
+      const speed = parseFloat(speedSlider.value);
+      backgroundMesh.material.uniforms.time.value = time * 0.001 * speed;
+
+      renderer.clear();
+      renderer.render(backgroundScene, backgroundCamera);
+
+      shape.rotation.x += 0.01;
+      shape.rotation.y += 0.01;
+      renderer.render(scene, camera);
+    }
+
+    init();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+
+</html>
