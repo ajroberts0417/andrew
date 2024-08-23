@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smalltalk Tech Demos</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://gist.githack.com/ajroberts0417/04fea1a9de492cd95c96623540b45c4b/raw/357b3bec205f6a8e436f989e8213ba5a46febf3e/shaderCreator.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #title-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+    }
+
+    h1 {
+      font-size: 3em;
+      margin-bottom: 0.2em;
+    }
+
+    h2 {
+      font-size: 1.5em;
+      font-weight: normal;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="title-container">
+    <h1>Smalltalk Tech Demos</h1>
+    <h2>playing with AI to build simple demos</h2>
+  </div>
+  <script>
+    window.addEventListener('load', initShader);
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tone.js Keyboard App</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #keyboard {
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .key {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      margin: 5px;
+      text-align: center;
+      line-height: 50px;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .key:active,
+    .key.active {
+      background-color: #b0b0b0;
+    }
+
+    #instructions {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="instructions">Click anywhere on the page to start the audio</div>
+  <div id="keyboard">
+    <div class="key" data-note="C4">A</div>
+    <div class="key" data-note="D4">S</div>
+    <div class="key" data-note="E4">D</div>
+    <div class="key" data-note="F4">F</div>
+    <div class="key" data-note="G4">G</div>
+    <div class="key" data-note="A4">H</div>
+    <div class="key" data-note="B4">J</div>
+    <div class="key" data-note="C5">K</div>
+  </div>
+
+  <script>
+    const synth = new Tone.Synth().toDestination();
+    const keys = document.querySelectorAll('.key');
+    const instructions = document.getElementById('instructions');
+    let isAudioStarted = false;
+
+    // Initialize audio context on any click
+    document.body.addEventListener('click', async () => {
+      if (!isAudioStarted) {
+        await Tone.start();
+        isAudioStarted = true;
+        instructions.textContent = 'Audio is ready! Click keys or use A-K on your keyboard to play';
+      }
+    }, { once: true });
+
+    keys.forEach(key => {
+      key.addEventListener('mousedown', () => playNote(key.dataset.note));
+      key.addEventListener('mouseup', () => stopNote());
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.repeat) return;
+      const key = document.querySelector(`.key[data-note="${getNoteFromKey(e.key)}"]`);
+      if (key) {
+        key.classList.add('active');
+        playNote(key.dataset.note);
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      const key = document.querySelector(`.key[data-note="${getNoteFromKey(e.key)}"]`);
+      if (key) {
+        key.classList.remove('active');
+        stopNote();
+      }
+    });
+
+    function playNote(note) {
+      if (isAudioStarted) {
+        synth.triggerAttack(note);
+      }
+    }
+
+    function stopNote() {
+      if (isAudioStarted) {
+        synth.triggerRelease();
+      }
+    }
+
+    function getNoteFromKey(key) {
+      const keyMap = {
+        'a': 'C4', 's': 'D4', 'd': 'E4', 'f': 'F4',
+        'g': 'G4', 'h': 'A4', 'j': 'B4', 'k': 'C5'
+      };
+      return keyMap[key.toLowerCase()];
+    }
+  </script>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="ShaderBackground.js"></script>
+  <script defer>
+    const bg = new ShaderBackground({
+      speed: 1,
+      graininess: 0.1,
+      color1: '#800080',
+      color2: '#1a669f',
+      color3: '#e6b800'
+    });
+    bg.start();
+  </script>
+</body>
+
+</html>
