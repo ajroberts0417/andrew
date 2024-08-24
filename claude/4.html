@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Side-Scrolling Platformer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+    const config = {
+      type: Phaser.AUTO,
+      width: 800,
+      height: 600,
+      physics: {
+        default: 'arcade',
+        arcade: {
+          gravity: { y: 300 },
+          debug: false
+        }
+      },
+      scene: {
+        preload: preload,
+        create: create,
+        update: update
+      }
+    };
+
+    const game = new Phaser.Game(config);
+    let player;
+    let platforms;
+    let cursors;
+    let goal;
+    let currentLevel = 0;
+    let levelText;
+
+    const levels = [
+      [
+        "                                        ",
+        "                                        ",
+        "  P                                   G ",
+        "XXXXXXX   XXXXXXXXXXXX     XXXXXXXXXXXXX",
+        "       X  X                X            ",
+        "       X  X          XXXXXX             ",
+        "    XXXX  XXXXXX                    XXXX",
+        "    X            XXXXXXXXXXXXXXXXXX     ",
+        "XXXXX                                   "
+      ],
+      [
+        "                                                            ",
+        "  P                                                         ",
+        "XXXXXXX   XXXXXXXXXXXX     XXXXXXXXXXXXX                  G ",
+        "       X  X          X     X           XXXXXXXXXXXXXXXXXXXX",
+        "       X  X          XXXXXX                                ",
+        "    XXXX  XXXXXX                    XXXX                   ",
+        "    X            XXXXXXXXXXXXXXXXXX                        ",
+        "XXXXX                                                      "
+      ],
+      [
+        "                                                                                ",
+        "  P                                                                             ",
+        "XXXXXXX   XXXXXXXXXXXX     XXXXXXXXXXXXX                                      G ",
+        "       X  X          X     X           XXXXXXXXXXXXXXXXXXXXXX   XXXXXXXXXXXXXXX",
+        "       X  X          XXXXXX                               X     X               ",
+        "    XXXX  XXXXXX                    XXXX                  X     X               ",
+        "    X            XXXXXXXXXXXXXXXXXX                       X     X               ",
+        "XXXXX                                                     XXXXXXX               "
+      ]
+    ];
+
+    function preload() {
+      this.load.image('ground', '/api/placeholder/40/40');
+      this.load.image('player', '/api/placeholder/32/48');
+      this.load.image('goal', '/api/placeholder/32/32');
+    }
+
+    function create() {
+      cursors = this.input.keyboard.createCursorKeys();
+      levelText = this.add.text(16, 16, 'Level: 1', { fontSize: '32px', fill: '#000' }).setScrollFactor(0);
+      createLevel(this, currentLevel);
+    }
+
+    function createLevel(scene, levelIndex) {
+      // Clear existing objects
+      if (platforms) platforms.clear(true, true);
+      if (player) player.destroy();
+      if (goal) goal.destroy();
+
+      platforms = scene.physics.add.staticGroup();
+
+      const level = levels[levelIndex];
+      const worldWidth = level[0].length * 40;
+      const worldHeight = level.length * 40;
+
+      scene.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+      scene.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          if (level[y][x] === 'X') {
+            platforms.create(x * 40 + 20, y * 40 + 20, 'ground');
+          } else if (level[y][x] === 'P') {
+            player = scene.physics.add.sprite(x * 40 + 20, y * 40 + 20, 'player');
+          } else if (level[y][x] === 'G') {
+            goal = scene.physics.add.sprite(x * 40 + 20, y * 40 + 20, 'goal');
+          }
+        }
+      }
+
+      player.setBounce(0.2);
+      player.setCollideWorldBounds(true);
+
+      scene.cameras.main.startFollow(player, true, 0.08, 0.08);
+
+      scene.physics.add.collider(player, platforms);
+      scene.physics.add.overlap(player, goal, reachGoal, null, scene);
+
+      levelText.setText('Level: ' + (levelIndex + 1));
+    }
+
+    function update() {
+      if (cursors.left.isDown) {
+        player.setVelocityX(-160);
+      } else if (cursors.right.isDown) {
+        player.setVelocityX(160);
+      } else {
+        player.setVelocityX(0);
+      }
+
+      if (cursors.up.isDown && player.body.touching.down) {
+        player.setVelocityY(-330);
+      }
+    }
+
+    function reachGoal(player, goal) {
+      currentLevel++;
+      if (currentLevel >= levels.length) {
+        this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'You Win!', { fontSize: '64px', fill: '#000' })
+          .setOrigin(0.5)
+          .setScrollFactor(0);
+        this.physics.pause();
+      } else {
+        createLevel(this, currentLevel);
+      }
+    }
+  </script>
+</body>
+
+</html>
