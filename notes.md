@@ -1,0 +1,1 @@
+In reflecting on the circumstances of my life, I can't help but be 
